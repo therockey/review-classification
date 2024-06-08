@@ -3,10 +3,10 @@ import re
 import nltk
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
-import string
+from bs4 import BeautifulSoup
 
 DATA_FILE = 'Reviews.csv'
-OUTPUT_FILE = 'Reviews_cleaned.csv'
+OUTPUT_FILE = 'Reviews_cleaned2.csv'
 
 
 def main():
@@ -40,19 +40,22 @@ def main():
 
 
 def clean_review(review, lemmatizer, stop_words):
-    # 6.1. Usunięcie znaków specjalnych
+    # 6.1. Usunięcie tagów HTML
+    review = BeautifulSoup(review, "html.parser").get_text()
+
+    # 6.2. Usunięcie znaków specjalnych
     review = re.sub("[^a-zA-Z]", " ", review)
 
-    # 6.2. Zamiana na małe litery
+    # 6.3. Zamiana na małe litery
     review = review.lower()
 
-    # 6.3. Rozbicie recenzji na słowa
+    # 6.4. Rozbicie recenzji na słowa
     words = review.split()
 
-    # 6.4. Lematyzacja i usunięcie stop słów
+    # 6.5. Lematyzacja i usunięcie stop słów
     words = [lemmatizer.lemmatize(word) for word in words if word not in stop_words]
 
-    # 6.5. Połączenie słów w całość
+    # 6.6. Połączenie słów w całość
     cleaned_review = " ".join(words)
 
     return cleaned_review
