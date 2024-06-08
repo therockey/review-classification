@@ -2,17 +2,17 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.naive_bayes import MultinomialNB
-from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import confusion_matrix, classification_report
 import seaborn as sns
 import matplotlib.pyplot as plt
 from joblib import dump, load
 import os
+from imblearn.over_sampling import SMOTE
 
 TRAIN_SIZE = 0.8
 RANDOM_STATE = 42
-DATA_FILE = 'Reviews.csv'
+DATA_FILE = 'Reviews_cleaned.csv'
 WEIGHTED = False
 
 ALGORITHMS = [{'name': 'Naive-Bayes',
@@ -26,11 +26,6 @@ ALGORITHMS = [{'name': 'Naive-Bayes',
                'args': {'criterion': 'entropy', 'random_state': 42},
                'result': []
                },
-              {'name': 'SVM',
-               'model': SVC,
-               'args': {'kernel': 'linear', 'random_state': 42},
-               'result': []
-               }
               ]
 
 
@@ -46,42 +41,38 @@ def main():
 
     print(f"Successfully dropped NaNs and created labels...")
 
-    # 3. Obliczanie przydatności recenzji
-    data['helpfulness'] = data.apply(lambda x: x['HelpfulnessNumerator'] / (x['HelpfulnessDenominator'] + 1e-5), axis=1)
-    data['helpfulness'] = data['helpfulness'].fillna(0)
-
-    # 4.  Normalizacja przydatności
-    data['helpfulness'] = data['helpfulness'] / data['helpfulness'].max()
-
-    print(f"Successfully calculated and normalized helpfulness...")
-
-    # 5. Tokenizacja i TF-IDF
+    # 3. Tokenizacja i TF-IDF
     tfidf = TfidfVectorizer(stop_words='english')
     x = tfidf.fit_transform(data['Text'])
     y = data['label']
-    weights = data['helpfulness']
 
     print(f"Successfully tokenized and calculated TF-IDF...")
 
-    # 6. Podział danych na zestawy treningowe i testowe
-    x_train, x_test, y_train, y_test, weights_train, weights_test = train_test_split(x, y, weights,
+    # 4. Balansowanie danych
+    smote = SMOTE()
+    x_res, y_res = smote.fit_resample(x, y)
+
+    print(f"Successfully balanced data...")
+
+    # 5. Podział danych na zestawy treningowe i testowe
+    x_train, x_test, y_train, y_test, weights_train, weights_test = train_test_split(x_res, y_res,
                                                                                      test_size=1 - TRAIN_SIZE,
                                                                                      random_state=RANDOM_STATE)
 
     print(f"Successfully split data into training and testing sets...")
 
-    # 7. Trenowanie modelów
+    # 6. Trenowanie modelów
     for algorithm in ALGORITHMS:
         if WEIGHTED:
             algorithm['trained_model'] = train_model(algorithm, x_train, y_train, weights_train)
         else:
             algorithm['trained_model'] = train_model(algorithm, x_train, y_train)
 
-    # 8. Predykcja
+    # 7. Predykcja
     for algorithm in ALGORITHMS:
         algorithm['result'] = algorithm['trained_model'].predict(x_test)
 
-    # 9. Ewaluacja
+    # 8. Ewaluacja
     for algorithm in ALGORITHMS:
         print(algorithm['name'])
         print(classification_report(y_test, algorithm['result']))
