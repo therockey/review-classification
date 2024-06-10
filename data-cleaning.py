@@ -6,7 +6,7 @@ from nltk.stem import WordNetLemmatizer
 from bs4 import BeautifulSoup
 
 DATA_FILE = 'Reviews.csv'
-OUTPUT_FILE = 'Reviews_cleaned2.csv'
+OUTPUT_FILE = 'Reviews_cleaned.csv'
 
 
 def main():

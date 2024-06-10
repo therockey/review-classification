@@ -13,7 +13,6 @@ from imblearn.over_sampling import SMOTE
 TRAIN_SIZE = 0.8
 RANDOM_STATE = 42
 DATA_FILE = 'Reviews_cleaned.csv'
-WEIGHTED = False
 
 ALGORITHMS = [{'name': 'Naive-Bayes',
                'model': MultinomialNB,
@@ -48,25 +47,22 @@ def main():
 
     print(f"Successfully tokenized and calculated TF-IDF...")
 
-    # 4. Balansowanie danych
-    smote = SMOTE()
-    x_res, y_res = smote.fit_resample(x, y)
-
-    print(f"Successfully balanced data...")
-
-    # 5. Podział danych na zestawy treningowe i testowe
-    x_train, x_test, y_train, y_test, weights_train, weights_test = train_test_split(x_res, y_res,
-                                                                                     test_size=1 - TRAIN_SIZE,
-                                                                                     random_state=RANDOM_STATE)
+    # 4. Podział danych na zestawy treningowe i testowe
+    x_train, x_test, y_train, y_test = train_test_split(x, y,
+                                                        test_size=1 - TRAIN_SIZE,
+                                                        random_state=RANDOM_STATE)
 
     print(f"Successfully split data into training and testing sets...")
 
+    # 5. Balansowanie danych
+    smote = SMOTE()
+    x_train, y_train = smote.fit_resample(x_train, y_train)
+
+    print(f"Successfully balanced data...")
+
     # 6. Trenowanie modelów
     for algorithm in ALGORITHMS:
-        if WEIGHTED:
-            algorithm['trained_model'] = train_model(algorithm, x_train, y_train, weights_train)
-        else:
-            algorithm['trained_model'] = train_model(algorithm, x_train, y_train)
+        algorithm['trained_model'] = train_model(algorithm, x_train, y_train)
 
     # 7. Predykcja
     for algorithm in ALGORITHMS:
@@ -76,33 +72,32 @@ def main():
     for algorithm in ALGORITHMS:
         print(algorithm['name'])
         print(classification_report(y_test, algorithm['result']))
-        print_confusion_matrix(y_test, algorithm['result'], algorithm['name'], WEIGHTED)
+        print_confusion_matrix(y_test, algorithm['result'], algorithm['name'])
 
 
-def print_confusion_matrix(y_test, y_pred, algorithm_name, weighted=False):
+def print_confusion_matrix(y_test, y_pred, algorithm_name):
     conf_matrix = confusion_matrix(y_test, y_pred, labels=['positive', 'neutral', 'negative'])
     sns.heatmap(conf_matrix, annot=True, fmt='d', xticklabels=['positive', 'neutral', 'negative'],
                 yticklabels=['positive', 'neutral', 'negative'])
     plt.xlabel('Predicted')
     plt.ylabel('Actual')
-    plt.title(f'Confusion matrix for {algorithm_name}, weighted={weighted}')
+    plt.title(f'Macierz pomyłek dla algorytmu {algorithm_name}')
     plt.show()
 
 
-def train_model(algorithm, x_train, y_train, weights=None):
-    if not os.path.exists(f'{algorithm["name"]}_{len(y_train)}_{"weighted" if weights else "unweighted"}.joblib'):
+def train_model(algorithm, x_train, y_train):
+    if not os.path.exists(f'{algorithm["name"]}_{len(y_train)}.joblib'):
         print(
-            f'Training {"weighted" if weights else "unweighted"} model {algorithm["name"]} on sample size {len(y_train)}...')
+            f'Training model {algorithm["name"]} on sample size {len(y_train)}...')
         model = algorithm['model'](**algorithm['args'])
-        model.fit(x_train, y_train, sample_weight=weights)
+        model.fit(x_train, y_train)
 
-        dump(model, f'{algorithm["name"]}_{len(y_train)}_{"weighted" if weights else "unweighted"}.joblib')
+        dump(model, f'{algorithm["name"]}_{len(y_train)}.joblib')
         return model
 
-    print(
-        f'Model file found, loading {"weighted" if weights else "unweighted"} model {algorithm["name"]} trained on sample size {len(y_train)}...')
+    print(f'Model file found, loading model {algorithm["name"]} trained on sample size {len(y_train)}...')
 
-    return load(f'{algorithm["name"]}_{len(y_train)}_{"weighted" if weights else "unweighted"}.joblib')
+    return load(f'{algorithm["name"]}_{len(y_train)}.joblib')
 
 
 if __name__ == "__main__":

@@ -7,13 +7,17 @@ import seaborn as sns
 
 
 def main():
-    data = pd.read_csv('Reviews_cleaned2.csv')
+    data = pd.read_csv('Reviews_cleaned.csv')
 
     print("Product count: ", data['ProductId'].nunique())
     print("User count: ", data['UserId'].nunique())
 
     # Calculate the length of each review
     data['review_length'] = data['Text'].apply(review_length)
+    data['label'] = data['Score'].apply(lambda x: 'positive' if x > 3 else 'negative' if x < 3 else 'neutral')
+    review_counts = data['label'].value_counts()
+    for label, count in review_counts.items():
+        print(f"{label}: {count} ({count / len(data) * 100:.2f}%)")
 
     # Plot the distribution of review lengths
     plt.figure(figsize=(10, 6))
@@ -47,6 +51,12 @@ def main():
     plt.title('Najczęściej występujące słowa w recenzjach')
     plt.xlabel('Słowa')
     plt.ylabel('Liczba wystąpień')
+    plt.show()
+
+    # Macierz korelacji długości recenzji i ocen
+    plt.figure(figsize=(10, 6))
+    sns.heatmap(data[['review_length', 'Score']].corr(), annot=True, cmap='coolwarm')
+    plt.title('Macierz korelacji długości recenzji i ocen')
     plt.show()
 
 
